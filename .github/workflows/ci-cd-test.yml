@@ -1,0 +1,62 @@
+name: CI/CD - test
+
+on:
+  push:
+    paths:
+      - 'services/**'
+      - '.github/workflows/ci-cd-test.yml'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    env:
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+      EKS_CLUSTER_NAME: ${{ secrets.EKS_CLUSTER_NAME }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to ECR
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Build, tag and push images
+        run: |
+          REPO_BASE="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+          for d in services/*; do
+            svc=$(basename "$d")
+            if [ -f "$d/Dockerfile" ]; then
+              docker build -t "${svc}:latest" "$d"
+              docker tag "${svc}:latest" "${REPO_BASE}/${svc}:latest"
+              docker push "${REPO_BASE}/${svc}:latest"
+              echo "Pushed ${REPO_BASE}/${svc}:latest"
+            fi
+          done
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: '1.28.0'
+
+      - name: Update kubeconfig
+        run: aws eks update-kubeconfig --region "${AWS_REGION}" --name "${EKS_CLUSTER_NAME}"
+
+      - name: Deploy manifests to cluster
+        run: |
+          REPO_BASE="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+          for d in services/*; do
+            svc=$(basename "$d")
+            if [ -d "$d/k8s" ]; then
+              # replace the placeholder <ECR_URL> with repo base in the files (runner copy)
+              sed -i "s|<ECR_URL>|${REPO_BASE}|g" "$d/k8s"/*.yaml || true
+              kubectl apply -f "$d/k8s"
+            fi
+          done

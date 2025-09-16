@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: svc4
+  labels:
+    app: svc4
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: svc4
+  template:
+    metadata:
+      labels:
+        app: svc4
+    spec:
+      containers:
+        - name: svc4
+          image: <ECR_URL>/svc4:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: SERVICE_NAME
+              value: "svc4"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "250m"
+              memory: "256Mi"

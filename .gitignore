@@ -1,0 +1,17 @@
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+*.tfvars
+
+# OS / Python
+__pycache__/
+*.pyc
+
+# Docker
+*.tar
+
+# kubeconfig
+kubeconfig*
