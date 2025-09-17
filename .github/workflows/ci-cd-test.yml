@@ -42,9 +42,9 @@ jobs:
           done
 
       - name: Setup kubectl
-        uses: azure/setup-kubectl@v3
+        uses: actions/setup-kubectl@v4
         with:
-          version: '1.28.0'
+          kubectl-version: 'v1.28.2'
 
       - name: Update kubeconfig
         run: aws eks update-kubeconfig --region "${AWS_REGION}" --name "${EKS_CLUSTER_NAME}"
