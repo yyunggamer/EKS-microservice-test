@@ -41,10 +41,13 @@ jobs:
             fi
           done
 
-      - name: Setup kubectl
-        uses: actions/setup-kubectl@v4
-        with:
-          kubectl-version: 'v1.28.2'
+      - name: Install kubectl
+        run: |
+          curl -LO "https://dl.k8s.io/release/v1.28.2/bin/linux/amd64/kubectl"
+          chmod +x kubectl
+          sudo mv kubectl /usr/local/bin/kubectl
+          kubectl version --client
+
 
       - name: Update kubeconfig
         run: aws eks update-kubeconfig --region "${AWS_REGION}" --name "${EKS_CLUSTER_NAME}"
